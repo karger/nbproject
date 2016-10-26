@@ -12,7 +12,7 @@ from base import annotations, doc_analytics
 import  json, sys, datetime, time
 from base import  auth, signals, constants, models as M, utils_response as UR
 #TODO import responder
-from django.http import HttpResponse
+from django.http import HttpResponse, UnreadablePostError
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.utils.decorators import method_decorator
 from django.conf import settings
@@ -220,11 +220,15 @@ def login_user(P,req):
     user = auth.checkUser(email, password)
     if user is None:
         return UR.prepare_response({"ckey": None})
-    u_in = json.loads(urllib.unquote(req.COOKIES.get("userinfo", urllib.quote('{"ckey": ""}'))))
-    if "ckey" in u_in and u_in["ckey"] != "" and u_in["ckey"] != user.confkey:
+    try: 
+        u_in = json.loads(urllib.unquote(req.COOKIES.userinfo)).ckey
+    except: 
+        u_in = ""
+    if u_in != "" and u_in != user.confKey:
         #log that there's been an identity change
         auth.log_guest_login(u_in["ckey"], user.id)
-    user_dict = {"ckey": user.confkey, "email": user.email, "firstname": user.firstname, "lastname":user.lastname,
+    user_dict = {"ckey": user.confkey, "email": user.email, 
+                 "firstname": user.firstname, "lastname": user.lastname,
                  "guest": user.guest, "valid": user.valid, "id": user.id}
     user_dict["userinfo"] = urllib.quote(json.dumps(user_dict))
     return UR.prepare_response(user_dict) #this is what's needed for the client to set a cookie and be authenticated as the new user !
@@ -894,7 +898,7 @@ def run(req):
                 assert False, "[PDF] method '%s' not found in __EXPORTS" %  fctname
                 r.content = UR.prepare_response({}, 1,"[PDF] method '%s' not found in __EXPORTS" %  fctname)
                 return r
-    except IOError:
+    except (IOError, UnreadablePostError):
         logging.error("[rpc.views.run] IOError")
         r.content = UR.prepare_response({}, 1,"I/O Error")
         return r

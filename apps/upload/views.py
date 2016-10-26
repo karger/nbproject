@@ -11,7 +11,7 @@ License
 
 import logging
 from base import utils_response as UR
-from django.http import HttpResponse
+from django.http import HttpResponse, UnreadablePostError
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from base import auth, annotations, models as M
